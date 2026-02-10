@@ -39,7 +39,7 @@ spec:
     {{- end }}
     {{- range $i, $vol :=  .Values.persistence.data }}
     - metadata:
-        name: data-rustfs-{{ $i }}
+        name: data-rustfs-disk-{{ $i }}
         labels:
           {{- toYaml $.Values.commonLabels | nindent 10 }}
       spec:
