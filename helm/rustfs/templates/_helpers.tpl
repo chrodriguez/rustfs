@@ -75,7 +75,7 @@ Return the secret name
 {{/*
 Return image pull secret content
 */}}
-{{- define "imagePullSecret" }}
+{{- define "rustfs.imageRegistryCredentialsSecret" }}
 {{- with .Values.imageRegistryCredentials }}
 {{- printf "{\"auths\":{\"%s\":{\"username\":\"%s\",\"password\":\"%s\",\"email\":\"%s\",\"auth\":\"%s\"}}}" .registry .username .password .email (printf "%s:%s" .username .password | b64enc) | b64enc }}
 {{- end }}
@@ -84,17 +84,17 @@ Return image pull secret content
 {{/*
 Return the default imagePullSecret name
 */}}
-{{- define "rustfs.imagePullSecret.name" -}}
-{{- printf "%s-registry-secret" (include "rustfs.fullname" .) }}
+{{- define "rustfs.imageRegistryCredentialsSecretName" -}}
+{{- printf "registry-secret-%s" (include "rustfs.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Render imagePullSecrets for workloads - appends registry secret
 */}}
-{{- define "chart.imagePullSecrets" -}}
+{{- define "rustfs.imagePullSecrets" -}}
 {{- $secrets := .Values.imagePullSecrets | default list }}
 {{- if .Values.imageRegistryCredentials.enabled }}
-{{- $secrets = append $secrets (dict "name" (include "rustfs.imagePullSecret.name" .)) }}
+{{- $secrets = append $secrets (dict "name" (include "rustfs.imageRegistryCredentialsSecretName" .)) }}
 {{- end }}
 {{- toYaml $secrets }}
 {{- end }}
@@ -108,19 +108,17 @@ Render RUSTFS_VOLUMES
 {{- if .Values.mtls.enabled -}}
   {{- $protocol = "https" -}}
 {{- end -}}
-
-{{- if eq (int .Values.replicaCount) 4 }}
-{{- printf "%s://%s-{0...%d}.%s-headless.%s.svc.cluster.local:%d/data/rustfs{0...%d}" $protocol (include "rustfs.fullname" .) (sub (.Values.replicaCount | int) 1) (include "rustfs.fullname" . ) .Release.Namespace (.Values.service.endpoint.port | int) (sub (.Values.replicaCount | int) 1) }}
-{{- end }}
-{{- if eq (int .Values.replicaCount) 16 }}
-{{- printf "%s://%s-{0...%d}.%s-headless.%s.svc.cluster.local:%d/data" $protocol (include "rustfs.fullname" .) (sub (.Values.replicaCount | int) 1) (include "rustfs.fullname" .) .Release.Namespace (.Values.service.endpoint.port | int) }}
-{{- end }}
+{{- printf "%s://%s-{0...%d}.%s-headless.%s.svc.cluster.local:%d/data/rustfs{0...%d}"
+    $protocol (include "rustfs.fullname" .)
+    (sub (.Values.replicaCount | int) 1)
+    (include "rustfs.fullname" . ) .Release.Namespace
+    (.Values.service.endpoint.port | int)
+    (sub (len .Values.persistence.data) 1) }}
 {{- end }}
 
 {{/*
 Render RUSTFS_SERVER_DOMAINS
 */}}
-
 {{- define "rustfs.serverDomains" -}}
 {{- $domains := list .Values.config.rustfs.domains -}}
 {{- $fullname := include "rustfs.fullname" . -}}
@@ -131,4 +129,41 @@ Render RUSTFS_SERVER_DOMAINS
   {{- $domains = append $domains $podDomain -}}
 {{- end -}}
 {{- join "," $domains -}}
+{{- end -}}
+
+{{/*
+Standalone logs PersistentVolumeClaim
+*/}}
+{{- define "rustfs.standaloneLogsClaimName" -}}
+{{- printf "logs-%s" (include "rustfs.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{/*
+Standalone data PersistentVolumeClaim
+*/}}
+{{- define "rustfs.standaloneDataClaimName" -}}
+{{- printf "data-%s" (include "rustfs.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{/*
+Define RUSTFS_OBS_LOG_DIRECTORY acording to persistence.logs
+*/}}
+{{- define "rustfs.obsLogDirectory" -}}
+{{- if .Values.persistence.logs }}
+{{- .Values.config.rustfs.obs_log_directory | default "/data/logs" -}}
+{{- else -}}
+""
+{{- end -}}
+{{- end -}}
+
+{{- define "rustfs.modeStandalone?" -}}
+{{- if eq ( .Values.mode.type | lower ) "standalone" -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "rustfs.modeDistributed?" -}}
+{{- if eq ( .Values.mode.type | lower ) "distributed" -}}
+true
+{{- end -}}
 {{- end -}}

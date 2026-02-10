@@ -1,39 +1,49 @@
-{{- if .Values.mode.standalone.enabled }}
-{{- with .Values.storageclass }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  annotations:
-    helm.sh/resource-policy: keep
-  name: {{ include "rustfs.fullname" $ }}-data
-  labels:
-    {{- toYaml $.Values.commonLabels | nindent 4 }}
-spec:
-  accessModes: [ ReadWriteOnce ]
-  {{- with .name }}
-  storageClassName: {{ . }}
-  {{- end }}
-  resources:
-    requests:
-      storage: {{ .dataStorageSize }}
-
+{{- if ( include "rustfs.modeStandalone?" . ) }}
+{{- range $i, $vol :=  .Values.persistence.data }}
 ---
-
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   annotations:
     helm.sh/resource-policy: keep
-  name: {{ include "rustfs.fullname" $ }}-logs
+  name: {{ include "rustfs.standaloneDataClaimName" $ }}
   labels:
     {{- toYaml $.Values.commonLabels | nindent 4 }}
 spec:
   accessModes: [ ReadWriteOnce ]
-  {{- with .name }}
-  storageClassName: {{ . }}
+  {{- if $vol.storageClass -}}
+  {{- if eq $vol.storageClass "-" }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ $vol.storageClass }}
+  {{- end }}
   {{- end }}
   resources:
     requests:
-      storage: {{ .logStorageSize }}
+      storage: {{ required (printf ".persistence.data[%d].size is required" $i) $vol.size }}
+{{- end }}
+{{- if .Values.persistence.logs }}
+{{- $vol := .Values.persistence.logs -}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: {{ include "rustfs.standaloneLogsClaimName" $ }}
+  labels:
+    {{- toYaml $.Values.commonLabels | nindent 4 }}
+spec:
+  accessModes: [ ReadWriteOnce ]
+  {{- if $vol.storageClass -}}
+  {{- if eq $vol.storageClass "-" }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ $vol.storageClass }}
+  {{- end }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ required ".persistence.logs.size is required" $vol.size }}
 {{- end }}
 {{- end }}

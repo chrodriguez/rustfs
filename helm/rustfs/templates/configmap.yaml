@@ -9,7 +9,7 @@ data:
   RUSTFS_ADDRESS: {{ .address | quote }}
   RUSTFS_CONSOLE_ADDRESS: {{ .console_address | quote }}
   RUSTFS_CONSOLE_ENABLE: {{ .console_enable | quote }}
-  RUSTFS_OBS_LOG_DIRECTORY: {{ .obs_log_directory | quote }}
+  RUSTFS_OBS_LOG_DIRECTORY: {{ include "rustfs.obsLogDirectory" $ }}
   RUSTFS_OBS_LOGGER_LEVEL: {{ .log_level | quote }}
   RUSTFS_OBS_ENVIRONMENT: {{ .obs_environment | quote }}
   {{- if .region }}
@@ -30,11 +30,7 @@ data:
     {{- end }}
   {{- end }}
   {{- end }}
-  {{- if .Values.mode.distributed.enabled }}
   RUSTFS_VOLUMES: {{ .Values.config.rustfs.volumes | default (include "rustfs.volumes" .) | quote }}
-  {{- else }}
-  RUSTFS_VOLUMES: "/data"
-  {{- end }}
   {{- if .Values.mtls.enabled }}
   RUSTFS_SERVER_MTLS_ENABLE: "1"
   RUSTFS_TLS_KEYLOG: "1"

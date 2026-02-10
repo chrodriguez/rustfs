@@ -1,4 +1,4 @@
-{{- if .Values.mode.distributed.enabled }}
+{{- if (include "rustfs.modeDistributed?" . ) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -19,15 +19,14 @@ spec:
       port: {{ .Values.service.console.port }}
   selector:
     {{- include "rustfs.selectorLabels" . | nindent 4 }}
-{{- end }}
-
 ---
+{{- end }}
 {{- $serviceType := .Values.service.type }}
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "rustfs.fullname" . }}-svc
-  {{- if and .Values.mode.distributed.enabled (eq .Values.ingress.className "traefik")}}
+  {{- if eq .Values.ingress.className "traefik" }}
   annotations:
     {{- toYaml .Values.ingress.traefikAnnotations | nindent 4 }}
     {{- if and .Values.mtls.enabled (eq .Values.ingress.className "traefik") }}

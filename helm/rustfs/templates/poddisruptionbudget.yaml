@@ -1,4 +1,4 @@
-{{- if and .Values.pdb.create .Values.mode.distributed.enabled }}
+{{- if and .Values.pdb.create (include "rustfs.modeDistributed?" .) }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
